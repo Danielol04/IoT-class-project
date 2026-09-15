@@ -1,0 +1,22 @@
+apiVersion: 1
+datasources:
+  - name: InfluxDB
+    type: influxdb
+    access: proxy
+    url: http://influxdb:8086
+    jsonData:
+      version: Flux
+      organization: iot_org
+      defaultBucket: iot_data
+    secureJsonData:
+      token: my-super-secret-token
+  - name: PostgreSQL
+    type: postgres
+    access: proxy
+    url: postgres:5432
+    user: iot_admin
+    jsonData:
+      database: iot_cloud
+      sslmode: disable
+    secureJsonData:
+      password: iot_secret

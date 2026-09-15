@@ -1,0 +1,110 @@
+version: "3.8"
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: cloud-mosquitto
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./mosquitto/config/mosquitto.conf:/mosquitto/config/mosquitto.conf
+      - mosquitto_data:/mosquitto/data
+      - mosquitto_log:/mosquitto/log
+    networks:
+      - cloud-net
+
+  postgres:
+    image: postgres:16
+    container_name: cloud-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-iot_cloud}
+      POSTGRES_USER: ${POSTGRES_USER:-iot_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-iot_secret}
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./postgres/init:/docker-entrypoint-initdb.d
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - cloud-net
+
+  influxdb:
+    image: influxdb:2
+    container_name: cloud-influxdb
+    restart: unless-stopped
+    environment:
+      DOCKER_INFLUXDB_INIT_MODE: setup
+      DOCKER_INFLUXDB_INIT_USERNAME: ${INFLUX_USER:-iot_admin}
+      DOCKER_INFLUXDB_INIT_PASSWORD: ${INFLUX_PASSWORD:-iot_secret123}
+      DOCKER_INFLUXDB_INIT_ORG: ${INFLUX_ORG:-iot_org}
+      DOCKER_INFLUXDB_INIT_BUCKET: ${INFLUX_BUCKET:-iot_data}
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: ${INFLUX_TOKEN:-my-super-secret-token}
+    ports:
+      - "8086:8086"
+    volumes:
+      - influxdb_data:/var/lib/influxdb2
+    networks:
+      - cloud-net
+
+  grafana:
+    image: grafana/grafana:11.0.0
+    container_name: cloud-grafana
+    restart: unless-stopped
+    depends_on:
+      - influxdb
+      - postgres
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
+      - grafana_data:/var/lib/grafana
+    networks:
+      - cloud-net
+
+  ingestion-service:
+    build: ./ingestion-service
+    container_name: cloud-ingestion
+    restart: unless-stopped
+    depends_on:
+      - mosquitto
+      - postgres
+    networks:
+      - cloud-net
+
+  timeseries-ingestion-service:
+    build: ./timeseries-ingestion-service
+    container_name: cloud-timeseries-ingestion
+    restart: unless-stopped
+    depends_on:
+      - mosquitto
+      - influxdb
+    networks:
+      - cloud-net
+
+  telegram-bot:
+    build: ./telegram-bot
+    container_name: cloud-telegram-bot
+    restart: unless-stopped
+    depends_on:
+      - mosquitto
+    environment:
+      TELEGRAM_TOKEN: ${TELEGRAM_TOKEN}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID}
+    networks:
+      - cloud-net
+
+volumes:
+  mosquitto_data:
+  mosquitto_log:
+  postgres_data:
+  influxdb_data:
+  grafana_data:
+
+networks:
+  cloud-net:
+    driver: bridge

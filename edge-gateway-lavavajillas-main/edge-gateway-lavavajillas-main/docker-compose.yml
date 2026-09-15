@@ -1,0 +1,29 @@
+services:
+  edge-app:
+    build: ./edge-app
+    container_name: edge-app
+    environment:
+      MQTT_BROKER: host.docker.internal
+      MQTT_PORT: 1883
+      MQTT_USERNAME: lavavajillas
+      MQTT_PASSWORD: lavavajillas
+      CLOUD_MQTT_BROKER: ${CLOUD_IP}
+      CLOUD_MQTT_PORT: 1883
+      PYTHONUNBUFFERED: 1
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+  edge-forwarding-service:
+    build: ./edge-forwarding-service
+    container_name: edge-forwarding-service
+    environment:
+      MQTT_LOCAL_BROKER: host.docker.internal
+      MQTT_GLOBAL_BROKER: ${CLOUD_IP}
+      MQTT_PORT: 1883
+      MQTT_USERNAME: lavavajillas
+      MQTT_PASSWORD: lavavajillas
+      PYTHONUNBUFFERED: 1
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped

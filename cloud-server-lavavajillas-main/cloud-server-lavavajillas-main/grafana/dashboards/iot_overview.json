@@ -1,0 +1,107 @@
+{
+  "uid": "iot-cloud-overview",
+  "title": "IoT Cloud - Overview",
+  "tags": ["iot", "cloud"],
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "time": {
+    "from": "2024-01-01T00:00:00Z",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "IMU - Accelerometer (ax, ay, az)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "datasource": { "type": "influxdb", "uid": "InfluxDB" },
+      "targets": [
+        {
+          "refId": "A",
+          "query": "from(bucket: \"iot_data\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"imu\")\n  |> filter(fn: (r) => r._field == \"ax\" or r._field == \"ay\" or r._field == \"az\")"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "IMU - Gyroscope (gx, gy, gz)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "datasource": { "type": "influxdb", "uid": "InfluxDB" },
+      "targets": [
+        {
+          "refId": "A",
+          "query": "from(bucket: \"iot_data\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"imu\")\n  |> filter(fn: (r) => r._field == \"gx\" or r._field == \"gy\" or r._field == \"gz\")"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Temperature (C)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "datasource": { "type": "influxdb", "uid": "InfluxDB" },
+      "targets": [
+        {
+          "refId": "A",
+          "query": "from(bucket: \"iot_data\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"temperature_humidity\")\n  |> filter(fn: (r) => r._field == \"temperature\")"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Humidity (%)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "datasource": { "type": "influxdb", "uid": "InfluxDB" },
+      "targets": [
+        {
+          "refId": "A",
+          "query": "from(bucket: \"iot_data\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"temperature_humidity\")\n  |> filter(fn: (r) => r._field == \"humidity\")"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Last Access Events",
+      "type": "table",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "datasource": { "type": "postgres", "uid": "PostgreSQL" },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT id, card_id, site_id, result, to_timestamp(event_ts) AS event_time, created_at FROM access_log ORDER BY created_at DESC LIMIT 20;"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Last Alarm Events",
+      "type": "table",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "datasource": { "type": "postgres", "uid": "PostgreSQL" },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT id, site_id, alarm_type, to_timestamp(event_ts) AS event_time, details, created_at FROM alarm_log ORDER BY created_at DESC LIMIT 20;"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Node Status (boot_count / uptime_s)",
+      "type": "table",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 24 },
+      "datasource": { "type": "influxdb", "uid": "InfluxDB" },
+      "targets": [
+        {
+          "refId": "A",
+          "query": "from(bucket: \"iot_data\")\n  |> range(start: 2024-01-01T00:00:00Z, stop: now())\n  |> filter(fn: (r) => r._measurement == \"node_status\")\n  |> filter(fn: (r) => r._field == \"boot_count\" or r._field == \"uptime_s\")\n  |> group(columns: [\"device_id\", \"_field\"])\n  |> sort(columns: [\"_time\"], desc: true)\n  |> limit(n: 1)\n  |> group()\n  |> keep(columns: [\"device_id\", \"_field\", \"_value\"])\n  |> pivot(rowKey: [\"device_id\"], columnKey: [\"_field\"], valueColumn: \"_value\")"
+        }
+      ]
+    }
+  ]
+}
